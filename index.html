@@ -1,0 +1,735 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+</head>
+<body>
+<title>PRLT v9 Web</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: researcher console in one centred column; the task itself runs on a full-bleed, fixed mid-grey stage (PsychoPy [0,0,0]) identical in every theme */
+:root{
+  --bg:#eef1f5; --surface:#ffffff; --sunken:#f6f8fb; --fg:#162231; --muted:#566273; --line:#d5dce5;
+  --accent:#2c5a96; --accent-soft:#e3ebf6; --accent-ink:#ffffff;
+  --ok:#1d7347; --ok-soft:#e2f2e9; --warn:#9a5600; --warn-soft:#fbefdc; --bad:#b0281f; --bad-soft:#fbe5e3;
+  --font-body:"IBM Plex Sans Thai","Leelawadee UI","Sukhumvit Set","Noto Sans Thai",Tahoma,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --stage:#808080; --stage-ink:#ffffff; --stage-dim:#e6e6e6; --win:#7cff9e; --lose:#ff8a80;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1520; --surface:#172131; --sunken:#121a27; --fg:#e4eaf2; --muted:#9aa7b8; --line:#2a3850;
+  --accent:#7fa8e0; --accent-soft:#1d2d46; --accent-ink:#0f1520;
+  --ok:#6fd39c; --ok-soft:#14301f; --warn:#f0b35c; --warn-soft:#33260f; --bad:#ff8a80; --bad-soft:#3a1714;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1520; --surface:#172131; --sunken:#121a27; --fg:#e4eaf2; --muted:#9aa7b8; --line:#2a3850;
+  --accent:#7fa8e0; --accent-soft:#1d2d46; --accent-ink:#0f1520;
+  --ok:#6fd39c; --ok-soft:#14301f; --warn:#f0b35c; --warn-soft:#33260f; --bad:#ff8a80; --bad-soft:#3a1714;
+  color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.6}
+.wrap{max-width:880px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.bar{background:var(--surface);border-bottom:1px solid var(--line)}
+header.bar .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-block:12px}
+.brand{display:flex;align-items:baseline;gap:10px}
+.brand b{font-size:18px;letter-spacing:.01em}
+.brand span{font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+nav.tabs{display:flex;gap:4px;background:var(--sunken);border:1px solid var(--line);border-radius:999px;padding:3px}
+nav.tabs button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:14px;padding:6px 14px;border-radius:999px;cursor:pointer}
+nav.tabs button[aria-selected="true"]{background:var(--surface);color:var(--fg);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+main{padding-block:24px 48px;display:grid;gap:20px}
+h1{font-size:24px;line-height:1.3;margin:0;text-wrap:balance}
+h2{font-size:16px;margin:0 0 4px}
+p{margin:0}
+.lead{color:var(--muted);max-width:65ch}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px;display:grid;gap:16px;min-width:0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px}
+label.f{display:grid;gap:4px;font-size:13px;color:var(--muted);font-weight:500}
+input,select{font:inherit;font-size:15px;color:var(--fg);background:var(--sunken);border:1px solid var(--line);border-radius:8px;padding:9px 10px;width:100%}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.hint{font-size:13px;color:var(--muted)}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:14px}
+.check input{width:auto;margin-top:5px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn{font:inherit;font-size:15px;font-weight:600;border-radius:8px;padding:10px 18px;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--fg)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.small{font-size:13px;padding:6px 12px;font-weight:500}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.status{display:inline-flex;align-items:center;gap:8px;font-size:13px;padding:6px 10px;border-radius:999px;background:var(--sunken);border:1px solid var(--line);color:var(--muted)}
+.status i{width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block}
+.status.ok{background:var(--ok-soft);color:var(--ok);border-color:transparent}.status.ok i{background:var(--ok)}
+.status.warn{background:var(--warn-soft);color:var(--warn);border-color:transparent}.status.warn i{background:var(--warn)}
+.err{color:var(--bad);font-size:13px}
+/* schedule strip */
+.sched{display:grid;gap:6px}
+.sched-bar{display:flex;height:34px;border-radius:6px;overflow:hidden;border:1px solid var(--line)}
+.sched-bar div{display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:12px;color:var(--fg);border-right:2px solid var(--surface);min-width:0}
+.sched-bar div:last-child{border-right:0}
+.sched-bar .a{background:var(--accent-soft)}.sched-bar .b{background:var(--sunken)}
+.sched-axis{position:relative;height:16px;font-family:var(--font-mono);font-size:11px;color:var(--muted)}
+.sched-axis span{position:absolute;transform:translateX(-50%)}
+.kv{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.kv div{background:var(--sunken);border-radius:8px;padding:10px 12px}
+.kv dt{font-size:12px;color:var(--muted)}.kv dd{margin:0;font-family:var(--font-mono);font-size:14px;font-variant-numeric:tabular-nums}
+dl{margin:0}
+/* data table */
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{background:var(--sunken);color:var(--muted);font-weight:500;font-size:12px}
+td.num{font-family:var(--font-mono);font-variant-numeric:tabular-nums;text-align:right}
+tr:last-child td{border-bottom:0}
+.pill{font-size:12px;padding:2px 8px;border-radius:999px;background:var(--sunken)}
+.pill.complete{background:var(--ok-soft);color:var(--ok)}
+.pill.aborted{background:var(--bad-soft);color:var(--bad)}
+.pill.in_progress{background:var(--warn-soft);color:var(--warn)}
+.pill.test{background:var(--accent-soft);color:var(--accent)}
+.empty{padding:24px;text-align:center;color:var(--muted);font-size:14px}
+code{font-family:var(--font-mono);font-size:13px;background:var(--sunken);padding:1px 5px;border-radius:4px}
+
+/* ===== Task stage (fixed look, not themed) ===== */
+#stage{position:fixed;inset:0;z-index:100;background:var(--stage);color:var(--stage-ink);font-family:var(--font-body);display:flex;align-items:center;justify-content:center;
+  padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px);user-select:none;-webkit-user-select:none;touch-action:manipulation;cursor:default}
+#stage.nocursor{cursor:none}
+.st-text{max-width:min(760px,90vw);display:grid;gap:18px;text-align:center;font-size:clamp(18px,2.4vw,26px);line-height:1.75}
+.st-text .big{font-size:clamp(24px,3.4vw,36px);font-weight:600}
+.st-text .keys{display:flex;gap:18px;justify-content:center;flex-wrap:wrap}
+.st-text kbd{display:inline-block;min-width:48px;padding:4px 12px;border:2px solid var(--stage-ink);border-radius:8px;font-family:var(--font-mono);font-weight:500}
+.st-text .go{font-size:clamp(15px,1.8vw,19px);color:var(--stage-dim)}
+.st-btn{font:inherit;font-size:clamp(16px,2vw,20px);font-weight:600;padding:12px 28px;border-radius:10px;border:2px solid var(--stage-ink);background:transparent;color:var(--stage-ink);cursor:pointer;justify-self:center}
+.fix{position:relative;width:40px;height:40px}
+.fix::before,.fix::after{content:"";position:absolute;background:var(--stage-ink)}
+.fix::before{left:18px;top:0;width:4px;height:40px}.fix::after{top:18px;left:0;height:4px;width:40px}
+.stims{display:flex;gap:min(16vw,220px);align-items:center;justify-content:center}
+.stim{border:0;background:transparent;padding:18px;border-radius:14px;cursor:pointer;outline:6px solid transparent;outline-offset:0;touch-action:manipulation}
+.stim.chosen{outline-color:#ffeb3b}
+.stim.dim{opacity:.25}
+.shape{width:min(28vw,220px);aspect-ratio:1;display:block;max-width:100%}
+.shape.rect{border-radius:6px;border:4px solid #fff}
+.shape.circle{border-radius:50%;border:4px solid #fff}
+.shape.diamond{transform:rotate(45deg) scale(.74);border:5px solid #fff}
+/* feedback sits in its own reserved row under the stimuli, so it never overlaps them and the stimuli never move */
+#stage{flex-direction:column;gap:clamp(12px,3vh,32px)}
+.fb{position:static;height:120px;text-align:center;display:grid;gap:4px;align-content:start}
+#stage .fb[hidden]{display:grid!important;visibility:hidden}
+.fb .msg{font-size:clamp(28px,4vw,46px);font-weight:700}
+.fb .msg.win{color:var(--win)}.fb .msg.lose{color:var(--lose)}.fb .msg.slow{color:var(--stage-dim)}
+.fb .tot{font-size:clamp(14px,1.6vw,18px);color:var(--stage-dim);font-family:var(--font-mono)}
+.corner{position:fixed;top:0;left:0;width:72px;height:72px;z-index:3}
+.pause-note{position:fixed;bottom:calc(14px + env(safe-area-inset-bottom,0px));left:0;right:0;text-align:center;font-size:13px;color:var(--stage-dim)}
+.overlay{position:fixed;inset:0;z-index:4;background:rgba(40,40,40,.92);display:flex;align-items:center;justify-content:center}
+@media (max-width:560px){.stims{gap:6vw}.shape{width:36vw}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<header class="bar"><div class="wrap">
+  <div class="brand"><b>PRLT</b><span id="appver"></span></div>
+  <nav class="tabs" role="tablist">
+    <button role="tab" id="tab-setup" aria-selected="true">เริ่มทดสอบ</button>
+    <button role="tab" id="tab-data" aria-selected="false">ข้อมูลที่เก็บ</button>
+  </nav>
+</div></header>
+
+<main class="wrap">
+<section id="view-setup" style="display:grid;gap:20px">
+  <div style="display:grid;gap:6px">
+    <h1>Probabilistic Reversal Learning Task</h1>
+    <p class="lead">ฉบับเว็บของ PsychoPy v8: 160 trials, reward 80/20, fixed reversals หลัง trial 55, 70, 90, 105, 125 (Waltmann et al., 2022) พร้อม counterbalance 2 versions สำหรับ test-retest</p>
+  </div>
+
+  <div class="panel">
+    <div class="row" style="justify-content:space-between"><h2>ข้อมูลผู้เข้าร่วม</h2><span id="store-status" class="status"><i></i>กำลังตรวจสอบที่เก็บข้อมูล…</span></div>
+    <form id="setup" class="grid" novalidate>
+      <label class="f">Participant ID
+        <input id="f-pid" required placeholder="HC017" autocomplete="off" pattern="[A-Za-z0-9_-]{2,20}">
+      </label>
+      <label class="f">Group
+        <select id="f-group"><option value="HC">HC</option><option value="AUD">AUD</option></select>
+      </label>
+      <label class="f">Session
+        <select id="f-session"><option value="1">S1 (test)</option><option value="2">S2 (retest)</option></select>
+      </label>
+      <label class="f">Version
+        <select id="f-version"><option value="1">V1 · สี่เหลี่ยม ฟ้า/ส้ม</option><option value="2">V2 · ข้าวหลามตัด เขียวน้ำทะเล/ชมพู</option></select>
+      </label>
+      <label class="f">Age (years)
+        <input id="f-age" type="number" min="18" max="99" inputmode="numeric">
+      </label>
+      <label class="f">Sex
+        <select id="f-sex"><option value="M">M</option><option value="F">F</option></select>
+      </label>
+      <label class="f">Handedness
+        <select id="f-hand"><option value="R">R</option><option value="L">L</option></select>
+      </label>
+    </form>
+    <p class="hint">Counterbalance: ครึ่งหนึ่งของผู้เข้าร่วมเริ่ม S1 ด้วย V1 อีกครึ่งเริ่มด้วย V2 และ S2 ใช้ version ตรงข้ามกับ S1 เสมอ ใช้ coded ID เท่านั้น ห้ามกรอกชื่อหรือ HN</p>
+    <label class="check"><input type="checkbox" id="f-test"><span><b>โหมดทดลองระบบ</b> 20 trials, reversal หลัง trial 8 และ 14 ข้อมูลถูกติดป้าย <code>test</code> และไม่ใช่ข้อมูลวิจัย</span></label>
+    <div class="row">
+      <button class="btn primary" id="btn-start" type="button">เริ่มการทดสอบ</button>
+      <span id="setup-err" class="err" role="alert"></span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>โครงสร้าง task</h2>
+    <div class="sched">
+      <div class="sched-bar" id="sched-bar"></div>
+      <div class="sched-axis" id="sched-axis"></div>
+    </div>
+    <dl class="kv">
+      <div><dt>Trials</dt><dd>10 practice + 160</dd></div>
+      <div><dt>Reward</dt><dd>80% / 20%</dd></div>
+      <div><dt>Timing (ms)</dt><dd>500 · ≤2500 · 1200 · 500</dd></div>
+      <div><dt>Keys</dt><dd>F = ซ้าย · J = ขวา · แตะ</dd></div>
+      <div><dt>Points</dt><dd>+10 / 0</dd></div>
+      <div><dt>Bonus</dt><dd>0.05 ฿/แต้ม · ≤100 ฿</dd></div>
+    </dl>
+    <p class="hint">Timing = fixation · response window · feedback · ITI ระหว่างทำ task กด <kbd>Esc</kbd> หรือแตะมุมซ้ายบน 3 ครั้ง เพื่อหยุดหลังจบรอบนั้น RT วัดด้วย <code>performance.now()</code> และ event timestamp ของเบราว์เซอร์ ปุ่มอ่านจากตำแหน่งแป้น (<code>KeyF</code>/<code>KeyJ</code>) จึงใช้ได้แม้คีย์บอร์ดเป็นภาษาไทย</p>
+  </div>
+</section>
+
+<section id="view-data" hidden style="display:grid;gap:20px">
+  <div style="display:grid;gap:6px">
+    <h1>ข้อมูลที่เก็บ</h1>
+    <p class="lead" id="data-lead">แต่ละ session มี 2 ไฟล์: trial-level CSV สำหรับ model fitting และ behavioral summary CSV</p>
+  </div>
+  <div class="panel">
+    <div class="row" style="justify-content:space-between">
+      <h2>Sessions</h2>
+      <div class="row">
+        <button class="btn small" id="btn-refresh" type="button">รีเฟรช</button>
+        <button class="btn small" id="btn-all-trials" type="button">ดาวน์โหลด trials ทั้งหมด</button>
+        <button class="btn small" id="btn-all-summary" type="button">ดาวน์โหลด summary ทั้งหมด</button>
+      </div>
+    </div>
+    <div class="tbl"><table>
+      <thead><tr><th>Session ID</th><th>Status</th><th>Group</th><th>S/V</th><th>Trials</th><th>Acc</th><th>Points</th><th>อัปเดต</th><th></th></tr></thead>
+      <tbody id="sess-body"><tr><td colspan="9" class="empty">กำลังโหลด…</td></tr></tbody>
+    </table></div>
+    <p class="hint" id="data-msg"></p>
+  </div>
+  <div class="panel">
+    <h2>นิยาม behavioral columns</h2>
+    <p class="hint"><code>stay</code> = เลือก stimulus เดียวกับ trial ก่อนหน้าที่ตอบ · <code>win_stay</code>/<code>lose_stay</code> = stay แยกตามผลของ trial ก่อน · <code>consec_loss</code> = จำนวน loss ติดกันจนถึง trial ก่อน · <code>persev_opportunity</code> = 2 trial ที่ตอบล่าสุดไม่ได้แต้มทั้งคู่จากรูปเดียวกัน และรูปนั้นเป็นรูปที่ผิดใน trial ปัจจุบัน · <code>perseverate</code> = เลือกรูปนั้นซ้ำ (Waltmann et al., 2022) · คอลัมน์ <code>choice_num</code>, <code>outcome</code>, <code>missed</code>, <code>rt</code> (วินาที), <code>reversal_this_trial</code> เข้ากันได้กับไฟล์ PsychoPy v8.1 · <code>post_reversal_5</code> = 5 trials แรกหลัง reversal · <code>reversal_triggered</code> = 1 ที่ trial สุดท้ายก่อน contingency เปลี่ยน · trial ที่ไม่ตอบ (miss) ไม่ได้แต้มและนับเป็น trial ตามตาราง</p>
+  </div>
+</section>
+</main>
+
+<div id="stage" hidden>
+  <div class="corner" id="corner"></div>
+  <div id="st-content"></div>
+  <div class="fb" id="st-fb" hidden><div class="msg" id="fb-msg"></div><div class="tot" id="fb-tot"></div></div>
+  <div class="pause-note" id="pause-note" hidden>จะหยุดหลังจบรอบนี้</div>
+</div>
+
+<script>
+(() => {
+'use strict';
+// ============================================================
+// CONFIG — same structure as PsychoPy PRLT_AUD_v8.py
+// ============================================================
+const CFG = {
+  APP_VERSION: 'PRLT-v9.2-web',
+  ANTICIPATORY_MS: 150,
+  N_TRIALS: 160,
+  REVERSALS: [55, 70, 90, 105, 125],      // reversal AFTER these trials
+  TEST_N: 20, TEST_REVERSALS: [8, 14],
+  N_PRACTICE: 10,
+  P_HIGH: 0.80,
+  POINTS_WIN: 10, POINTS_LOSS: 0,
+  BAHT_PER_POINT: 0.05, MAX_BONUS: 100,
+  FIX_MS: 500, RESP_MS: 2500, FB_MS: 1200, ITI_MS: 500,
+  SAVE_EVERY: 20,
+};
+const STIM_SETS = {
+  '1': { shape: 'rect',    left: 'rgb(153,178,242)', right: 'rgb(249,204,140)' },
+  '2': { shape: 'diamond', left: 'rgb(89,198,198)',  right: 'rgb(236,115,198)' },
+  'P': { shape: 'circle',  left: 'rgb(160,214,140)', right: 'rgb(196,160,226)' },
+};
+const $ = id => document.getElementById(id);
+$('appver').textContent = CFG.APP_VERSION;
+
+// ============================================================
+// Storage: artifact db → else localStorage + file download
+// ============================================================
+let db = null, downloads = null;
+const inViewer = typeof window.claude?.use === 'function';
+const lsGet = k => { try { return localStorage.getItem(k); } catch { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); return true; } catch { return false; } };
+const lsKeys = () => { try { return Object.keys(localStorage).filter(k => k.startsWith('prlt:')); } catch { return []; } };
+
+function setStore(kind, text) {
+  const el = $('store-status');
+  el.className = 'status ' + kind;
+  el.innerHTML = '<i></i>';
+  el.appendChild(document.createTextNode(text));
+}
+setStore('warn', inViewer ? 'กำลังเชื่อมฐานข้อมูล…' : 'โหมดออฟไลน์: เก็บในเครื่องนี้ + ดาวน์โหลด CSV');
+
+async function initCaps() {
+  if (!inViewer) { refreshData(); return; }
+  try { db = await window.claude.use('db'); } catch { db = null; }
+  try { downloads = await window.claude.use('downloads'); } catch { downloads = null; }
+  if (db) setStore('ok', 'บันทึกลงฐานข้อมูลของ artifact');
+  else setStore('warn', 'ไม่ได้เชื่อมฐานข้อมูล: เก็บในเครื่องนี้ (ต้องลงชื่อเข้าใช้ claude.ai เพื่อบันทึกกลาง)');
+  refreshData();
+}
+initCaps();
+
+let saveChain = Promise.resolve();
+function persist(rec) {
+  const body = JSON.parse(JSON.stringify(rec));
+  lsSet('prlt:' + rec.session_id, JSON.stringify(body));
+  if (!db) return Promise.resolve('local');
+  saveChain = saveChain.then(async () => {
+    const ref = db.doc('sessions/' + rec.session_id);
+    try { await ref.set(body); return 'db'; }
+    catch (e) {
+      if (e && e.code === 'unavailable') {
+        await new Promise(r => setTimeout(r, 600 + Math.random() * 800));
+        try { await ref.set(body); return 'db'; } catch { return 'local'; }
+      }
+      return 'local';
+    }
+  });
+  return saveChain;
+}
+
+async function offerFile(filename, text) {
+  if (downloads) {
+    try { await downloads.save({ filename, data: text }); return true; }
+    catch (e) { if (e && e.code === 'declined') return false; }
+  }
+  if (!inViewer) {
+    const url = URL.createObjectURL(new Blob(['﻿' + text], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a'); a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    return true;
+  }
+  $('data-msg').textContent = 'ดาวน์โหลดไม่ได้ในมุมมองนี้ เปิด artifact ใน claude.ai แล้วลองใหม่';
+  return false;
+}
+
+// ============================================================
+// RNG (seeded, recorded per session)
+// ============================================================
+function mulberry32(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+// ============================================================
+// Schedule strip
+// ============================================================
+(function drawSchedule() {
+  const N = CFG.N_TRIALS, cuts = [0, ...CFG.REVERSALS, N];
+  const bar = $('sched-bar'), axis = $('sched-axis');
+  for (let i = 0; i < cuts.length - 1; i++) {
+    const d = document.createElement('div');
+    const len = cuts[i + 1] - cuts[i];
+    d.style.flex = String(len);
+    d.className = i % 2 ? 'b' : 'a';
+    d.textContent = len;
+    d.title = `Phase ${i + 1}: trial ${cuts[i] + 1}–${cuts[i + 1]}`;
+    bar.appendChild(d);
+  }
+  cuts.forEach(c => { const s = document.createElement('span'); s.style.left = (c / N * 100) + '%'; s.textContent = c; if (c === 0) s.style.transform = 'none'; if (c === N) s.style.transform = 'translateX(-100%)'; axis.appendChild(s); });
+})();
+
+// ============================================================
+// Tabs
+// ============================================================
+function showTab(which) {
+  $('tab-setup').setAttribute('aria-selected', String(which === 'setup'));
+  $('tab-data').setAttribute('aria-selected', String(which === 'data'));
+  $('view-setup').hidden = which !== 'setup';
+  $('view-data').hidden = which !== 'data';
+  if (which === 'data') refreshData();
+}
+$('tab-setup').onclick = () => showTab('setup');
+$('tab-data').onclick = () => showTab('data');
+
+// ============================================================
+// Stage helpers
+// ============================================================
+const stage = $('stage'), content = $('st-content');
+const wait = ms => new Promise(r => setTimeout(r, ms));
+const frame = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(t => r(t))));
+let pauseRequested = false, wakeLock = null, activeRec = null;
+// Leaving or hiding the page mid-task: count it, and mark the session aborted if the page closes
+document.addEventListener('visibilitychange', () => { if (activeRec && document.visibilityState === 'hidden') { activeRec.meta.visibility_lost = (activeRec.meta.visibility_lost || 0) + 1; } });
+window.addEventListener('pagehide', () => { if (activeRec) { activeRec.status = 'aborted'; activeRec.updated_at = new Date().toISOString(); persist(activeRec); } });
+
+function setContent(html) { content.innerHTML = html; }
+function clearFb() { $('st-fb').hidden = true; }
+
+function waitAdvance(btnId) {
+  return new Promise(res => {
+    const btn = btnId ? $(btnId) : null;
+    const done = () => { window.removeEventListener('keydown', onKey); if (btn) btn.removeEventListener('click', done); res(); };
+    const onKey = e => { if (e.code === 'Space' && !e.repeat) { e.preventDefault(); done(); } };
+    window.addEventListener('keydown', onKey);
+    if (btn) btn.addEventListener('click', done);
+  });
+}
+
+async function showPage(html, btnLabel = 'ต่อไป') {
+  setContent(`<div class="st-text">${html}<button class="st-btn" id="st-next" type="button">${btnLabel}</button><div class="go">หรือกด Space</div></div>`);
+  stage.classList.remove('nocursor');
+  await wait(400);
+  await waitAdvance('st-next');
+}
+
+function stimHtml(set) {
+  return `<div class="stims">
+    <button class="stim" id="stim-left" type="button" aria-label="ซ้าย"><span class="shape ${set.shape}" style="background:${set.left}"></span></button>
+    <button class="stim" id="stim-right" type="button" aria-label="ขวา"><span class="shape ${set.shape}" style="background:${set.right}"></span></button>
+  </div>`;
+}
+
+// response collector: resolves {side, t, device} or null on timeout
+function collectResponse(timeoutMs, onsetRef) {
+  return new Promise(res => {
+    let done = false;
+    const L = $('stim-left'), R = $('stim-right');
+    const finish = v => { if (done) return; done = true; clearTimeout(tid); window.removeEventListener('keydown', onKey, true); L.removeEventListener('pointerdown', onL); R.removeEventListener('pointerdown', onR); res(v); };
+    const onKey = e => {
+      if (e.repeat) return;
+      if (e.code === 'KeyF') { e.preventDefault(); finish({ side: 'left', t: e.timeStamp, device: 'key' }); }
+      else if (e.code === 'KeyJ') { e.preventDefault(); finish({ side: 'right', t: e.timeStamp, device: 'key' }); }
+    };
+    const pd = side => e => { e.preventDefault(); finish({ side, t: e.timeStamp, device: e.pointerType || 'pointer' }); };
+    const onL = pd('left'), onR = pd('right');
+    window.addEventListener('keydown', onKey, true);
+    L.addEventListener('pointerdown', onL); R.addEventListener('pointerdown', onR);
+    const tid = setTimeout(() => finish(null), timeoutMs);
+    onsetRef.cancel = () => finish(null);
+  });
+}
+
+// Esc / triple-tap corner → pause request
+window.addEventListener('keydown', e => { if (!stage.hidden && e.key === 'Escape') { pauseRequested = true; $('pause-note').hidden = false; } });
+let taps = [];
+$('corner').addEventListener('pointerdown', () => { const now = performance.now(); taps = taps.filter(t => now - t < 1500); taps.push(now); if (taps.length >= 3) { taps = []; pauseRequested = true; $('pause-note').hidden = false; } });
+
+function pauseDialog() {
+  return new Promise(res => {
+    const ov = document.createElement('div');
+    ov.className = 'overlay';
+    ov.innerHTML = `<div class="st-text"><div class="big">หยุดการทดสอบ</div><div>สำหรับผู้วิจัยเท่านั้น ข้อมูลที่ทำไปแล้วจะถูกบันทึกเป็นสถานะ aborted</div>
+      <div class="keys"><button class="st-btn" id="pd-cont" type="button">ทำต่อ</button><button class="st-btn" id="pd-stop" type="button">หยุดและบันทึก</button></div></div>`;
+    stage.appendChild(ov);
+    stage.classList.remove('nocursor');
+    $('pd-cont').onclick = () => { ov.remove(); res(false); };
+    $('pd-stop').onclick = () => { ov.remove(); res(true); };
+  });
+}
+
+// ============================================================
+// Behavioral indices + summary
+// ============================================================
+function addIndices(rows) {
+  let prevChoice = null, prevOut = null, prevPrevOut = null, consec = 0, last2 = [];
+  for (const r of rows) {
+    // v8.1-compatible columns
+    r.choice_num = r.choice_side === 'left' ? 0 : r.choice_side === 'right' ? 1 : '';
+    r.outcome = r.reward;
+    r.missed = r.choice_side === 'none' ? 1 : 0;
+    r.rt = r.rt_ms === '' ? '' : Math.round(r.rt_ms) / 1000;
+    r.reversal_this_trial = r.reversal_triggered;
+    // Perseveration (Waltmann et al., 2022): the last two answered trials were both losses on the same card,
+    // and that card is the wrong one on the current trial
+    const opp = last2.length === 2 && last2[0].reward === 0 && last2[1].reward === 0 && last2[0].side === last2[1].side && last2[1].side !== r.high_side;
+    r.persev_opportunity = opp ? 1 : 0;
+    r.prev_outcome = prevOut === null ? '' : prevOut;
+    r.prev_prev_outcome = prevPrevOut === null ? '' : prevPrevOut;
+    r.prev_feedback_win = prevOut === null ? '' : (prevOut === 'win' ? 1 : 0);
+    r.consec_loss = consec;
+    const valid = r.choice_stim !== '';
+    r.stay = (valid && prevChoice !== null) ? (r.choice_stim === prevChoice ? 1 : 0) : '';
+    r.win_stay = (r.stay !== '' && prevOut === 'win') ? r.stay : '';
+    r.lose_stay = (r.stay !== '' && prevOut === 'loss') ? r.stay : '';
+    r.perseverate = (opp && valid) ? (r.choice_side === last2[1].side ? 1 : 0) : '';
+    if (valid) {
+      last2 = [...last2, { side: r.choice_side, reward: r.reward }].slice(-2);
+      prevChoice = r.choice_stim;
+      prevPrevOut = prevOut;
+      prevOut = r.reward === 1 ? 'win' : 'loss';
+      consec = r.reward === 1 ? 0 : consec + 1;
+    }
+  }
+  return rows;
+}
+
+const mean = a => a.length ? a.reduce((s, x) => s + x, 0) / a.length : null;
+const median = a => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+const r3 = x => x === null || x === undefined ? '' : Math.round(x * 1000) / 1000;
+
+function summarize(meta, rows) {
+  const main = rows.filter(r => r.phase === 'main');
+  const valid = main.filter(r => r.choice_stim !== '');
+  const nums = k => main.filter(r => r[k] !== '').map(r => r[k]);
+  const s = {
+    session_id: meta.session_id, participant_id: meta.participant_id, group: meta.group, session: meta.session, version: meta.version,
+    mode: meta.mode, n_trials: main.length, n_missed: main.length - valid.length,
+    n_anticipatory: valid.filter(r => r.rt_anticipatory === 1).length,
+    pct_anticipatory: valid.length ? r3(valid.filter(r => r.rt_anticipatory === 1).length / valid.length) : '',
+    visibility_lost: meta.visibility_lost || 0,
+    accuracy: r3(mean(valid.map(r => r.correct))),
+    win_stay: r3(mean(nums('win_stay'))), lose_stay: r3(mean(nums('lose_stay'))),
+    lose_shift: (() => { const v = nums('lose_stay'); return v.length ? r3(1 - mean(v)) : ''; })(),
+    perseveration: r3(mean(nums('perseverate'))), n_perseveration_trials: nums('perseverate').length,
+    post_reversal_acc: r3(mean(valid.filter(r => r.post_reversal_5 === 1).map(r => r.correct))),
+    rt_mean_ms: r3(mean(valid.map(r => r.rt_ms))), rt_median_ms: r3(median(valid.map(r => r.rt_ms))),
+    acc_odd: r3(mean(valid.filter(r => r.odd_even === 'odd').map(r => r.correct))),
+    acc_even: r3(mean(valid.filter(r => r.odd_even === 'even').map(r => r.correct))),
+    winstay_odd: r3(mean(main.filter(r => r.odd_even === 'odd' && r.win_stay !== '').map(r => r.win_stay))),
+    winstay_even: r3(mean(main.filter(r => r.odd_even === 'even' && r.win_stay !== '').map(r => r.win_stay))),
+    total_points: main.length ? main[main.length - 1].total_points : 0,
+  };
+  s.bonus_baht = Math.min(CFG.MAX_BONUS, Math.round(s.total_points * CFG.BAHT_PER_POINT * 100) / 100);
+  const nPh = (meta.reversals || []).length + 1;
+  for (let p = 1; p <= nPh; p++) s['acc_phase' + p] = r3(mean(valid.filter(r => r.reversal_num === p - 1).map(r => r.correct)));
+  return s;
+}
+
+// ============================================================
+// CSV
+// ============================================================
+const TRIAL_COLS = ['session_id','participant_id','group','session','version','age','sex','handedness','mode','phase','trial','odd_even','reversal_num','trials_since_rev','post_reversal_5','high_side','choice_side','choice_stim','correct','reward','points','total_points','rt_ms','rt_anticipatory','response_device','reversal_triggered','prev_outcome','prev_prev_outcome','prev_feedback_win','stay','win_stay','lose_stay','consec_loss','persev_opportunity','perseverate','choice_num','outcome','missed','rt','reversal_this_trial','timestamp','app_version','seed'];
+const esc = v => { const s = v === null || v === undefined ? '' : String(v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+function toCSV(rows, cols) { return [cols.join(','), ...rows.map(r => cols.map(c => esc(r[c])).join(','))].join('\n'); }
+function trialRows(rec) { return rec.trials.map(t => ({ ...rec.meta, ...t })); }
+function summaryCols(list) { const set = []; list.forEach(s => Object.keys(s).forEach(k => { if (!set.includes(k)) set.push(k); })); return set; }
+
+// ============================================================
+// Task
+// ============================================================
+async function runTask(meta) {
+  const rng = mulberry32(meta.seed);
+  const set = STIM_SETS[meta.version];
+  const N = meta.n_trials, REV = meta.reversals;
+  const rec = { session_id: meta.session_id, meta, status: 'in_progress', trials: [], summary: null, started_at: new Date().toISOString(), updated_at: null };
+  activeRec = rec;
+
+  stage.hidden = false;
+  try { await document.documentElement.requestFullscreen?.(); } catch {}
+  try { wakeLock = await navigator.wakeLock?.request('screen'); } catch {}
+
+  // Instructions (Thai)
+  await showPage(`<div class="big">ยินดีต้อนรับ</div>
+    <div>ในงานนี้ คุณจะเห็นรูป 2 รูป อยู่ทางซ้ายและทางขวา<br>ให้เลือก 1 รูปในแต่ละรอบ</div>
+    <div class="keys"><span><kbd>F</kbd> เลือกรูปซ้าย</span><span><kbd>J</kbd> เลือกรูปขวา</span></div>
+    <div>หรือแตะที่รูปบนหน้าจอ</div>`);
+  await showPage(`<div>รูปหนึ่งจะให้แต้ม<b>บ่อยกว่า</b>อีกรูป แต่ไม่ใช่ทุกครั้ง<br>บางครั้งรูปที่ดีก็ไม่ได้แต้ม และรูปที่ไม่ดีก็ได้แต้มบ้าง</div>
+    <div>ระหว่างทำ รูปที่ให้แต้มบ่อยอาจ<b>เปลี่ยน</b>ไปโดยไม่บอกล่วงหน้า<br>พยายามหารูปที่ดีกว่าให้เจอ และเก็บแต้มให้ได้มากที่สุด</div>`);
+  await showPage(`<div>ได้แต้มครั้งละ <b>${CFG.POINTS_WIN} แต้ม</b><br>แต้มรวมจะแปลงเป็นค่าตอบแทนเพิ่ม ${CFG.POINTS_WIN} แต้ม = ${(CFG.POINTS_WIN * CFG.BAHT_PER_POINT).toFixed(2)} บาท (สูงสุด ${CFG.MAX_BONUS} บาท)</div>
+    <div>มีเวลาตอบรอบละ ${CFG.RESP_MS / 1000} วินาที</div>
+    <div>เริ่มจากการฝึก ${CFG.N_PRACTICE} รอบก่อน แต้มในรอบฝึกไม่นับ</div>`, 'เริ่มฝึก');
+
+  // Practice
+  const prac = await runBlock({ phase: 'practice', n: CFG.N_PRACTICE, reversals: [], set: STIM_SETS.P, rng, rec, startHigh: rng() < 0.5 ? 'left' : 'right' });
+  if (prac === 'abort') return finish(rec, 'aborted');
+
+  await showPage(`<div class="big">ฝึกเสร็จแล้ว</div>
+    <div>ต่อไปเป็นการทดสอบจริง ${N} รอบ ใช้เวลาประมาณ ${Math.round(N * 4.2 / 60)} นาที<br>รูปจะเปลี่ยนจากรอบฝึก</div>
+    <div>รูปที่ดีกว่าอาจเปลี่ยนได้หลายครั้ง ตั้งใจและตอบให้เร็วที่สุด</div>`, 'เริ่มการทดสอบ');
+
+  rec.meta.start_high = rng() < 0.5 ? 'left' : 'right';
+  const res = await runBlock({ phase: 'main', n: N, reversals: REV, set, rng, rec, startHigh: rec.meta.start_high });
+  return finish(rec, res === 'abort' ? 'aborted' : 'complete');
+}
+
+async function runBlock({ phase, n, reversals, set, rng, rec, startHigh }) {
+  let high = startHigh, total = 0, revNum = 0, sinceRev = 0;
+  const rows = [];
+  const breakAfter = phase === 'main' ? Math.floor(n / 2) : 0;
+  for (let trial = 1; trial <= n; trial++) {
+    if (breakAfter && trial === breakAfter + 1) {
+      const t0 = performance.now();
+      await showPage(`<div class="big">พักสักครู่</div><div>ท่านทำมาแล้ว ${breakAfter} รอบ เหลืออีก ${n - breakAfter} รอบ<br>พักได้ตามต้องการ</div>`, 'ทำต่อ');
+      rec.meta.break_sec = Math.round((performance.now() - t0) / 100) / 10;
+    }
+    if (pauseRequested) {
+      pauseRequested = false; $('pause-note').hidden = true;
+      if (await pauseDialog()) return 'abort';
+    }
+    sinceRev++;
+    stage.classList.add('nocursor');
+    // fixation
+    clearFb();
+    setContent('<div class="fix" aria-hidden="true"></div>');
+    await wait(CFG.FIX_MS);
+    // stimuli
+    setContent(stimHtml(set));
+    stage.classList.remove('nocursor');
+    const onsetRef = {};
+    // onset = first frame on which the stimuli are drawn; responses are accepted only from then on
+    const onset = await new Promise(r => requestAnimationFrame(t => r(t)));
+    const respP = collectResponse(CFG.RESP_MS + 50, onsetRef);
+    const resp = await Promise.race([respP, wait(CFG.RESP_MS).then(() => { onsetRef.cancel(); return respP; })]);
+    const ts = new Date().toISOString();
+
+    let row = { phase, trial, odd_even: trial % 2 ? 'odd' : 'even', reversal_num: revNum, trials_since_rev: sinceRev,
+      post_reversal_5: (revNum > 0 && sinceRev <= 5) ? 1 : 0, high_side: high, timestamp: ts };
+    const fbMsg = $('fb-msg'), fbTot = $('fb-tot');
+    if (resp) {
+      const correct = resp.side === high ? 1 : 0;
+      const reward = rng() < (correct ? CFG.P_HIGH : 1 - CFG.P_HIGH) ? 1 : 0;
+      const pts = reward ? CFG.POINTS_WIN : CFG.POINTS_LOSS;
+      total += pts;
+      Object.assign(row, { choice_side: resp.side, choice_stim: resp.side === 'left' ? 'A' : 'B', correct, reward, points: pts, total_points: total,
+        rt_ms: Math.round((resp.t - onset) * 10) / 10, rt_anticipatory: (resp.t - onset) < CFG.ANTICIPATORY_MS ? 1 : 0, response_device: resp.device });
+      $('stim-' + resp.side).classList.add('chosen');
+      $('stim-' + (resp.side === 'left' ? 'right' : 'left')).classList.add('dim');
+      fbMsg.className = 'msg ' + (reward ? 'win' : 'lose');
+      fbMsg.textContent = reward ? `ได้ +${CFG.POINTS_WIN} แต้ม` : (CFG.POINTS_LOSS ? `${CFG.POINTS_LOSS} แต้ม` : 'ไม่ได้แต้ม');
+    } else {
+      Object.assign(row, { choice_side: 'none', choice_stim: '', correct: '', reward: '', points: 0, total_points: total, rt_ms: '', rt_anticipatory: '', response_device: '' });
+      $('stim-left').classList.add('dim'); $('stim-right').classList.add('dim');
+      fbMsg.className = 'msg slow'; fbMsg.textContent = 'ตอบช้าเกินไป';
+    }
+    fbTot.textContent = phase === 'main' ? `รวม ${total} แต้ม` : 'รอบฝึก';
+    // reversal after this trial?
+    const revNow = reversals.includes(trial);
+    row.reversal_triggered = revNow ? 1 : 0;
+    rows.push(row);
+
+    $('st-fb').hidden = false;
+    stage.classList.add('nocursor');
+    await wait(CFG.FB_MS);
+    clearFb(); setContent('');
+    if (revNow) { high = high === 'left' ? 'right' : 'left'; revNum++; sinceRev = 0; }
+
+    // keep record current (indices recomputed over the whole block)
+    rec.trials = rec.trials.filter(t => t.phase !== phase).concat(addIndices(rows.map(r => ({ ...r }))));
+    if (phase === 'main' && trial % CFG.SAVE_EVERY === 0 && trial < n) { rec.updated_at = new Date().toISOString(); persist(rec); }
+    await wait(CFG.ITI_MS);
+  }
+  if (phase === 'practice') { rec.updated_at = new Date().toISOString(); persist(rec); }
+  return 'done';
+}
+
+async function finish(rec, status) {
+  activeRec = null;
+  rec.status = status;
+  rec.updated_at = new Date().toISOString();
+  rec.summary = summarize(rec.meta, rec.trials);
+  $('pause-note').hidden = true;
+  setContent(`<div class="st-text"><div class="big">${status === 'complete' ? 'จบการทดสอบ ขอบคุณครับ/ค่ะ' : 'หยุดการทดสอบแล้ว'}</div><div id="fin-save">กำลังบันทึกข้อมูล…</div></div>`);
+  stage.classList.remove('nocursor');
+  const where = await persist(rec);
+  const s = rec.summary;
+  const fin = $('fin-save');
+  fin.innerHTML = '';
+  const lines = [
+    status === 'complete' ? `แต้มรวม ${s.total_points} แต้ม · ค่าตอบแทนเพิ่ม ${s.bonus_baht.toFixed(2)} บาท` : `ทำไปแล้ว ${s.n_trials} รอบ`,
+    where === 'db' ? 'บันทึกลงฐานข้อมูลแล้ว' : 'บันทึกไว้ในเครื่องนี้แล้ว ดาวน์โหลด CSV ได้ที่แท็บ "ข้อมูลที่เก็บ"',
+  ];
+  lines.forEach(t => { const d = document.createElement('div'); d.textContent = t; fin.appendChild(d); });
+  const btn = document.createElement('button'); btn.className = 'st-btn'; btn.type = 'button'; btn.textContent = 'กลับหน้าผู้วิจัย';
+  fin.parentElement.appendChild(btn);
+  await new Promise(r => btn.addEventListener('click', r, { once: true }));
+  try { if (document.fullscreenElement) await document.exitFullscreen(); } catch {}
+  try { await wakeLock?.release(); } catch {}
+  stage.hidden = true;
+  showTab('data');
+}
+
+// ============================================================
+// Start
+// ============================================================
+$('btn-start').onclick = async () => {
+  const pid = $('f-pid').value.trim().toUpperCase();
+  const err = $('setup-err');
+  if (!/^[A-Za-z0-9_-]{2,20}$/.test(pid)) { err.textContent = 'Participant ID ต้องเป็นตัวอักษรอังกฤษ ตัวเลข _ หรือ - ยาว 2–20 ตัว'; $('f-pid').focus(); return; }
+  const test = $('f-test').checked;
+  const age = Number($('f-age').value);
+  if (!test && !(age >= 18 && age <= 99)) { err.textContent = 'กรอกอายุ 18–99 ปี (บังคับในการเก็บข้อมูลวิจัย)'; $('f-age').focus(); return; }
+  err.textContent = '';
+  const now = new Date();
+  const stamp = now.toISOString().replace(/[-:]/g, '').replace(/\..+/, '').replace('T', '_');
+  const session = $('f-session').value, version = $('f-version').value;
+  const meta = {
+    session_id: `PRLT_${pid}_S${session}_V${version}_${stamp}${test ? '_TEST' : ''}`,
+    participant_id: pid, group: $('f-group').value, session, version,
+    age: $('f-age').value, sex: $('f-sex').value, handedness: $('f-hand').value,
+    mode: test ? 'test' : 'research',
+    n_trials: test ? CFG.TEST_N : CFG.N_TRIALS,
+    reversals: test ? CFG.TEST_REVERSALS : CFG.REVERSALS,
+    seed: (Math.random() * 2 ** 32) >>> 0,
+    app_version: CFG.APP_VERSION,
+    user_agent: navigator.userAgent.slice(0, 160),
+    screen: `${screen.width}x${screen.height}@${window.devicePixelRatio}`,
+  };
+  pauseRequested = false;
+  try { await runTask(meta); }
+  catch (e) { console.error(e); stage.hidden = true; err.textContent = 'เกิดข้อผิดพลาดระหว่างทำ task: ' + (e && e.message || e); }
+};
+
+// ============================================================
+// Data view
+// ============================================================
+let cache = [];
+async function loadSessions() {
+  const out = new Map();
+  lsKeys().forEach(k => { try { const r = JSON.parse(lsGet(k)); if (r && r.session_id) out.set(r.session_id, { ...r, _src: 'local' }); } catch {} });
+  if (db) {
+    try {
+      const snap = await Promise.race([db.collection('sessions').orderBy('updated_at', 'desc').limit(500).get(), wait(10000).then(() => null)]);
+      if (snap) snap.docs.forEach(d => { const r = d.data(); if (r && r.session_id) out.set(r.session_id, { ...r, _src: 'db' }); });
+      else $('data-msg').textContent = 'ฐานข้อมูลตอบช้า แสดงเฉพาะข้อมูลในเครื่องนี้';
+    } catch (e) { $('data-msg').textContent = 'อ่านฐานข้อมูลไม่ได้ (' + (e && e.code || 'error') + ') แสดงเฉพาะข้อมูลในเครื่องนี้'; }
+  }
+  return [...out.values()].sort((a, b) => String(b.updated_at || '').localeCompare(String(a.updated_at || '')));
+}
+
+async function refreshData() {
+  $('data-msg').textContent = '';
+  cache = await loadSessions();
+  const body = $('sess-body');
+  body.innerHTML = '';
+  if (!cache.length) { body.innerHTML = '<tr><td colspan="9" class="empty">ยังไม่มี session ที่บันทึกไว้ เริ่มจากแท็บ "เริ่มทดสอบ" (ลองโหมดทดลองระบบก่อนได้)</td></tr>'; return; }
+  cache.forEach((r, i) => {
+    const s = r.summary || summarize(r.meta, r.trials || []);
+    const tr = document.createElement('tr');
+    const cell = (t, cls) => { const td = document.createElement('td'); if (cls) td.className = cls; td.textContent = t; tr.appendChild(td); return td; };
+    cell(r.session_id).style.fontFamily = 'var(--font-mono)';
+    const st = cell(''); const pill = document.createElement('span'); pill.className = 'pill ' + r.status; pill.textContent = r.status; st.appendChild(pill);
+    if (r.meta.mode === 'test') { const p2 = document.createElement('span'); p2.className = 'pill test'; p2.textContent = 'test'; p2.style.marginLeft = '4px'; st.appendChild(p2); }
+    cell(r.meta.group);
+    cell(`S${r.meta.session}/V${r.meta.version}`);
+    cell(String(s.n_trials), 'num');
+    cell(s.accuracy === '' ? '–' : s.accuracy.toFixed(2), 'num');
+    cell(String(s.total_points), 'num');
+    cell((r.updated_at || '').replace('T', ' ').slice(0, 16) + (r._src === 'local' ? ' · เครื่องนี้' : ''));
+    const act = cell('');
+    const b1 = document.createElement('button'); b1.className = 'btn small'; b1.type = 'button'; b1.textContent = 'Trials CSV';
+    b1.onclick = () => offerFile(r.session_id + '.csv', toCSV(trialRows(r), TRIAL_COLS));
+    const b2 = document.createElement('button'); b2.className = 'btn small'; b2.type = 'button'; b2.textContent = 'Summary'; b2.style.marginLeft = '6px';
+    b2.onclick = () => offerFile(r.session_id + '_behavioral_summary.csv', toCSV([s], summaryCols([s])));
+    act.append(b1, b2);
+    body.appendChild(tr);
+  });
+}
+$('btn-refresh').onclick = refreshData;
+$('btn-all-trials').onclick = () => {
+  const real = cache.filter(r => r.meta.mode !== 'test');
+  if (!real.length) { $('data-msg').textContent = 'ยังไม่มี session ข้อมูลวิจัย (ไม่รวมโหมดทดลองระบบ)'; return; }
+  offerFile('PRLT_all_trials_' + new Date().toISOString().slice(0, 10) + '.csv', toCSV(real.flatMap(trialRows), TRIAL_COLS));
+};
+$('btn-all-summary').onclick = () => {
+  const real = cache.filter(r => r.meta.mode !== 'test');
+  if (!real.length) { $('data-msg').textContent = 'ยังไม่มี session ข้อมูลวิจัย (ไม่รวมโหมดทดลองระบบ)'; return; }
+  const list = real.map(r => ({ status: r.status, ...(r.summary || summarize(r.meta, r.trials || [])) }));
+  offerFile('PRLT_all_summary_' + new Date().toISOString().slice(0, 10) + '.csv', toCSV(list, summaryCols(list)));
+};
+})();
+</script>
+
+</body>
+</html>
