@@ -3,10 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-</head>
-<body>
 <title>PRLT Fractal</title>
-<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Probabilistic Reversal Learning Task ภาษาไทย (fractal)">
+<meta name="theme-color" content="#162231">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="PRLT-F">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap">
 <style>
@@ -33,6 +39,8 @@
 
 *{box-sizing:border-box}
 [hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.6}
 .wrap{max-width:880px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 header.bar{background:var(--surface);border-bottom:1px solid var(--line)}
@@ -128,6 +136,8 @@ code{font-family:var(--font-mono);font-size:13px;background:var(--sunken);paddin
 @media (max-width:560px){.stims{gap:6vw}.shape{width:36vw}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
+</head>
+<body>
 
 <header class="bar"><div class="wrap">
   <div class="brand"><b>PRLT</b><span id="appver"></span></div>
@@ -275,7 +285,42 @@ let db = null, downloads = null;
 const inViewer = typeof window.claude?.use === 'function';
 const lsGet = k => { try { return localStorage.getItem(k); } catch { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); return true; } catch { return false; } };
-const lsKeys = () => { try { return Object.keys(localStorage).filter(k => k.startsWith('prlt:')); } catch { return []; } };
+const STORE_NS = 'prltf';
+const LS_PREFIX = STORE_NS + ':';
+const lsKeys = () => { try { return Object.keys(localStorage).filter(k => k.startsWith(LS_PREFIX)); } catch { return []; } };
+// IndexedDB is the local store: localStorage holds ~5 MB (about 30 sessions), IndexedDB far more
+let idbP = null;
+function idb() {
+  if (!idbP) idbP = new Promise(res => {
+    try {
+      const rq = indexedDB.open(STORE_NS + '-sessions', 1);
+      rq.onupgradeneeded = () => rq.result.createObjectStore('sessions', { keyPath: 'session_id' });
+      rq.onsuccess = () => res(rq.result);
+      rq.onerror = rq.onblocked = () => res(null);
+    } catch { res(null); }
+  });
+  return idbP;
+}
+async function idbPut(rec) {
+  const d = await idb(); if (!d) return false;
+  return new Promise(res => {
+    try { const tx = d.transaction('sessions', 'readwrite'); tx.objectStore('sessions').put(rec); tx.oncomplete = () => res(true); tx.onerror = tx.onabort = () => res(false); }
+    catch { res(false); }
+  });
+}
+async function idbAll() {
+  const d = await idb(); if (!d) return [];
+  return new Promise(res => {
+    try { const rq = d.transaction('sessions').objectStore('sessions').getAll(); rq.onsuccess = () => res(rq.result || []); rq.onerror = () => res([]); }
+    catch { res([]); }
+  });
+}
+async function saveLocal(body) {
+  if (await idbPut(body)) return true;
+  return lsSet(LS_PREFIX + body.session_id, JSON.stringify(body));
+}
+try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch {}
+const PLATFORM = inViewer ? 'claude-artifact' : location.hostname.endsWith('github.io') ? 'github-pages' : location.protocol === 'file:' ? 'local-file' : location.hostname;
 
 function setStore(kind, text) {
   const el = $('store-status');
@@ -283,7 +328,7 @@ function setStore(kind, text) {
   el.innerHTML = '<i></i>';
   el.appendChild(document.createTextNode(text));
 }
-setStore('warn', inViewer ? 'กำลังเชื่อมฐานข้อมูล…' : 'โหมดออฟไลน์: เก็บในเครื่องนี้ + ดาวน์โหลด CSV');
+setStore('warn', inViewer ? 'กำลังเชื่อมฐานข้อมูล…' : 'เก็บข้อมูลในเครื่องนี้เท่านั้น: ส่งออก CSV หลังจบทุก session');
 
 async function initCaps() {
   if (!inViewer) { refreshData(); return; }
@@ -298,8 +343,8 @@ initCaps();
 let saveChain = Promise.resolve();
 function persist(rec) {
   const body = JSON.parse(JSON.stringify(rec));
-  lsSet('prlt:' + rec.session_id, JSON.stringify(body));
-  if (!db) return Promise.resolve('local');
+  const local = saveLocal(body);
+  if (!db) return local.then(ok => ok ? 'local' : 'failed');
   saveChain = saveChain.then(async () => {
     const ref = db.doc('sessions/' + rec.session_id);
     try { await ref.set(body); return 'db'; }
@@ -320,7 +365,16 @@ async function offerFile(filename, text) {
     catch (e) { if (e && e.code === 'declined') return false; }
   }
   if (!inViewer) {
-    const url = URL.createObjectURL(new Blob(['﻿' + text], { type: 'text/csv;charset=utf-8' }));
+    const blob = new Blob(['﻿' + text], { type: 'text/csv;charset=utf-8' });
+    const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (ios && typeof File === 'function' && navigator.canShare) {
+      const file = new File([blob], filename, { type: 'text/csv' });
+      if (navigator.canShare({ files: [file] })) {
+        try { await navigator.share({ files: [file], title: filename }); return true; }
+        catch (e) { if (e && e.name === 'AbortError') return false; }
+      }
+    }
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = filename;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 2000);
@@ -642,9 +696,19 @@ async function finish(rec, status) {
   fin.innerHTML = '';
   const lines = [
     status === 'complete' ? `แต้มรวม ${s.total_points} แต้ม · ค่าตอบแทนเพิ่ม ${s.bonus_baht.toFixed(2)} บาท` : `ทำไปแล้ว ${s.n_trials} รอบ`,
-    where === 'db' ? 'บันทึกลงฐานข้อมูลแล้ว' : 'บันทึกไว้ในเครื่องนี้แล้ว ดาวน์โหลด CSV ได้ที่แท็บ "ข้อมูลที่เก็บ"',
+    where === 'db' ? 'บันทึกลงฐานข้อมูลแล้ว' : where === 'failed' ? 'ยังไม่ได้บันทึก' : 'บันทึกไว้ในเครื่องนี้แล้ว',
   ];
   lines.forEach(t => { const d = document.createElement('div'); d.textContent = t; fin.appendChild(d); });
+  if (where !== 'db') {
+    const ex = document.createElement('button'); ex.className = 'st-btn'; ex.type = 'button'; ex.textContent = 'ส่งออก CSV ตอนนี้ (ผู้วิจัย)';
+    ex.onclick = async () => {
+      const ok1 = await offerFile(rec.session_id + '.csv', toCSV(trialRows(rec), TRIAL_COLS));
+      const ok2 = ok1 && await offerFile(rec.session_id + '_behavioral_summary.csv', toCSV([rec.summary], summaryCols([rec.summary])));
+      if (ok1 && ok2) { await markExported([rec]); ex.textContent = 'ส่งออกแล้ว'; ex.disabled = true; }
+    };
+    fin.parentElement.appendChild(ex);
+    if (where === 'failed') { const w = document.createElement('div'); w.textContent = 'บันทึกในเครื่องไม่สำเร็จ ส่งออก CSV ก่อนปิดหน้านี้'; fin.appendChild(w); }
+  }
   const btn = document.createElement('button'); btn.className = 'st-btn'; btn.type = 'button'; btn.textContent = 'กลับหน้าผู้วิจัย';
   fin.parentElement.appendChild(btn);
   await new Promise(r => btn.addEventListener('click', r, { once: true }));
@@ -679,6 +743,7 @@ $('btn-start').onclick = async () => {
     app_version: CFG.APP_VERSION,
     user_agent: navigator.userAgent.slice(0, 160),
     screen: `${screen.width}x${screen.height}@${window.devicePixelRatio}`,
+    platform: PLATFORM,
   };
   pauseRequested = false;
   try { await runTask(meta); }
@@ -692,14 +757,20 @@ let cache = [];
 async function loadSessions() {
   const out = new Map();
   lsKeys().forEach(k => { try { const r = JSON.parse(lsGet(k)); if (r && r.session_id) out.set(r.session_id, { ...r, _src: 'local' }); } catch {} });
+  (await idbAll()).forEach(r => { if (r && r.session_id) out.set(r.session_id, { ...r, _src: 'local' }); });
   if (db) {
     try {
       const snap = await Promise.race([db.collection('sessions').orderBy('updated_at', 'desc').limit(500).get(), wait(10000).then(() => null)]);
-      if (snap) snap.docs.forEach(d => { const r = d.data(); if (r && r.session_id) out.set(r.session_id, { ...r, _src: 'db' }); });
+      if (snap) snap.docs.forEach(d => { const r = d.data(); if (r && r.session_id) out.set(r.session_id, { ...r, exported_at: (out.get(r.session_id) || {}).exported_at, _src: 'db' }); });
       else $('data-msg').textContent = 'ฐานข้อมูลตอบช้า แสดงเฉพาะข้อมูลในเครื่องนี้';
     } catch (e) { $('data-msg').textContent = 'อ่านฐานข้อมูลไม่ได้ (' + (e && e.code || 'error') + ') แสดงเฉพาะข้อมูลในเครื่องนี้'; }
   }
   return [...out.values()].sort((a, b) => String(b.updated_at || '').localeCompare(String(a.updated_at || '')));
+}
+
+async function markExported(list) {
+  const now = new Date().toISOString();
+  for (const r of list) { r.exported_at = now; const { _src, ...body } = r; await saveLocal(JSON.parse(JSON.stringify(body))); }
 }
 
 async function refreshData() {
@@ -720,10 +791,10 @@ async function refreshData() {
     cell(String(s.n_trials), 'num');
     cell(s.accuracy === '' ? '–' : s.accuracy.toFixed(2), 'num');
     cell(String(s.total_points), 'num');
-    cell((r.updated_at || '').replace('T', ' ').slice(0, 16) + (r._src === 'local' ? ' · เครื่องนี้' : ''));
+    cell((r.updated_at || '').replace('T', ' ').slice(0, 16) + (r._src === 'local' ? (r.exported_at ? ' · ส่งออกแล้ว' : ' · ยังไม่ส่งออก') : ''));
     const act = cell('');
     const b1 = document.createElement('button'); b1.className = 'btn small'; b1.type = 'button'; b1.textContent = 'Trials CSV';
-    b1.onclick = () => offerFile(r.session_id + '.csv', toCSV(trialRows(r), TRIAL_COLS));
+    b1.onclick = async () => { if (await offerFile(r.session_id + '.csv', toCSV(trialRows(r), TRIAL_COLS))) { await markExported([r]); refreshData(); } };
     const b2 = document.createElement('button'); b2.className = 'btn small'; b2.type = 'button'; b2.textContent = 'Summary'; b2.style.marginLeft = '6px';
     b2.onclick = () => offerFile(r.session_id + '_behavioral_summary.csv', toCSV([s], summaryCols([s])));
     act.append(b1, b2);
@@ -734,7 +805,7 @@ $('btn-refresh').onclick = refreshData;
 $('btn-all-trials').onclick = () => {
   const real = cache.filter(r => r.meta.mode !== 'test');
   if (!real.length) { $('data-msg').textContent = 'ยังไม่มี session ข้อมูลวิจัย (ไม่รวมโหมดทดลองระบบ)'; return; }
-  offerFile('PRLT_all_trials_' + new Date().toISOString().slice(0, 10) + '.csv', toCSV(real.flatMap(trialRows), TRIAL_COLS));
+  offerFile('PRLT_all_trials_' + new Date().toISOString().slice(0, 10) + '.csv', toCSV(real.flatMap(trialRows), TRIAL_COLS)).then(async ok => { if (ok) { await markExported(real); refreshData(); } });
 };
 $('btn-all-summary').onclick = () => {
   const real = cache.filter(r => r.meta.mode !== 'test');
@@ -744,6 +815,10 @@ $('btn-all-summary').onclick = () => {
 };
 })();
 </script>
-
+<script>
+if ('serviceWorker' in navigator && typeof window.claude?.use !== 'function' && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  window.addEventListener('load', () => { navigator.serviceWorker.register('../sw.js', { scope: '../' }).catch(() => {}); });
+}
+</script>
 </body>
 </html>
